@@ -42,7 +42,8 @@ function dataDe(s){
 }
 // acha a linha de cabeçalho (a que contém "Nome do Contribuinte") e devolve objetos por coluna
 function tabela(rows){
-  let h=rows.findIndex(r=>r.some(c=>norm(c).startsWith("nome do contribuinte")));
+  let h=rows.findIndex(r=>r.some(c=>norm(c).includes("contribuinte")) && r.some(c=>/valor|situacao|parcela|tentativa/.test(norm(c))));
+  if(h<0) h=rows.findIndex(r=>r.some(c=>/valor atual|valor da parcela|tentativa/.test(norm(c))));
   if(h<0) return {head:[],data:[]};
   const head=rows[h].map(norm);
   const data=rows.slice(h+1).filter(r=>r.some(c=>(c||"").trim()) && (r[0]||"").trim());
@@ -55,7 +56,9 @@ async function baixa(aba){
   const alvo=aba.gid!=null?`gid=${encodeURIComponent(aba.gid)}`:`sheet=${encodeURIComponent(aba.nome)}`;
   const url=`https://docs.google.com/spreadsheets/d/${C.SHEET_ID}/gviz/tq?tqx=out:csv&${alvo}&_=${Date.now()}`;
   const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
-  return parseCSV(await r.text());
+  const t=await r.text();
+  if(t.trimStart().startsWith("<")) throw new Error("A planilha não está compartilhada como 'qualquer pessoa com o link'");
+  return parseCSV(t);
 }
 
 let gTent,gRec;
@@ -67,9 +70,9 @@ async function carregar(){
   let pPago=0,pAber=0,pN=0,pNPagos=0,pTotalDA=0;
   const erros=[];
   for(const aba of C.ABAS){
-    let rows; try{ rows=await baixa(aba); }catch(e){ erros.push(aba.nome||("gid "+aba.gid)); continue; }
+    let rows; try{ rows=await baixa(aba); }catch(e){ erros.push((aba.nome||("gid "+aba.gid))+" ("+e.message+")"); continue; }
     const {head,data}=tabela(rows);
-    if(!head.length){ erros.push((aba.nome||("gid "+aba.gid))+" (cabeçalho não encontrado)"); continue; }
+    if(!head.length){ erros.push((aba.nome||("gid "+aba.gid))+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
     const iSit=col(head,"situacao");
     const tipo=aba.tipo||(head.some(x=>x.startsWith("tentativa"))?"cobranca":"parcelamento");
     if(tipo==="cobranca"){
