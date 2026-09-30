@@ -51,8 +51,9 @@ function tabela(rows){
 const col=(head,...nomes)=>{ for(const n of nomes){ const i=head.findIndex(x=>x.startsWith(norm(n))); if(i>=0) return i; } return -1; };
 const colsTodas=(head,prefixo)=>head.map((x,i)=>x.startsWith(norm(prefixo))?i:-1).filter(i=>i>=0);
 
-async function baixa(nome){
-  const url=`https://docs.google.com/spreadsheets/d/${C.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nome)}&_=${Date.now()}`;
+async function baixa(aba){
+  const alvo=aba.gid!=null?`gid=${encodeURIComponent(aba.gid)}`:`sheet=${encodeURIComponent(aba.nome)}`;
+  const url=`https://docs.google.com/spreadsheets/d/${C.SHEET_ID}/gviz/tq?tqx=out:csv&${alvo}&_=${Date.now()}`;
   const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
   return parseCSV(await r.text());
 }
@@ -66,11 +67,12 @@ async function carregar(){
   let pPago=0,pAber=0,pN=0,pNPagos=0,pTotalDA=0;
   const erros=[];
   for(const aba of C.ABAS){
-    let rows; try{ rows=await baixa(aba.nome); }catch(e){ erros.push(aba.nome); continue; }
+    let rows; try{ rows=await baixa(aba); }catch(e){ erros.push(aba.nome||("gid "+aba.gid)); continue; }
     const {head,data}=tabela(rows);
-    if(!head.length){ erros.push(aba.nome+" (cabeçalho não encontrado)"); continue; }
+    if(!head.length){ erros.push((aba.nome||("gid "+aba.gid))+" (cabeçalho não encontrado)"); continue; }
     const iSit=col(head,"situacao");
-    if(aba.tipo==="cobranca"){
+    const tipo=aba.tipo||(head.some(x=>x.startsWith("tentativa"))?"cobranca":"parcelamento");
+    if(tipo==="cobranca"){
       const iVal=col(head,"valor atual");
       const iTent=colsTodas(head,"tentativa");
       data.forEach(r=>{
