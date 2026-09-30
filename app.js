@@ -72,16 +72,26 @@ function fontes(){
   return [];
 }
 async function baixa(aba){
-  const alvo=aba.gid!=null?`gid=${encodeURIComponent(aba.gid)}`:`sheet=${encodeURIComponent(aba.nome)}`;
-  const url=`https://docs.google.com/spreadsheets/d/${aba.id}/gviz/tq?tqx=out:csv&headers=0&${alvo}&_=${Date.now()}`;
-  const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
-  const t=await r.text();
-  if(t.trimStart().startsWith("<")) throw new Error("A planilha não está compartilhada como 'qualquer pessoa com o link'");
-  return parseCSV(t);
+  const g=aba.gid!=null?aba.gid:0;
+  const base=`https://docs.google.com/spreadsheets/d/${aba.id}`;
+  const urls=aba.gid!=null||!aba.nome
+    ? [`${base}/export?format=csv&gid=${g}`, `${base}/gviz/tq?tqx=out:csv&headers=0&gid=${g}`]
+    : [`${base}/gviz/tq?tqx=out:csv&headers=0&sheet=${encodeURIComponent(aba.nome)}`];
+  let ultimo;
+  for(const u of urls){
+    try{
+      const r=await fetch(u+(u.includes("?")?"&":"?")+"_="+Date.now()); if(!r.ok) throw new Error("HTTP "+r.status);
+      const t=await r.text();
+      if(t.trimStart().startsWith("<")) throw new Error("A planilha não está compartilhada como 'qualquer pessoa com o link'");
+      return parseCSV(t);
+    }catch(e){ ultimo=e; }
+  }
+  throw ultimo;
 }
 
 let gTent,gRec;
-async function carregar(){
+async function carregar(){ try{ await carregar0(); }catch(e){ const m=$("msg"); m.textContent="Erro ao processar: "+e.message; m.style.display="block"; $("upd").textContent="Erro"; console.error(e); } }
+async function carregar0(){
   const msg=$("msg"); msg.style.display="none";
   const FONTES=fontes();
   $("links").value=FONTES.map(f=>`https://docs.google.com/spreadsheets/d/${f.id}/edit#gid=${f.gid||0}`).join("\n");
