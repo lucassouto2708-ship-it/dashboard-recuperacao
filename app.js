@@ -133,7 +133,7 @@ async function carregar(){
   gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:["Recuperado","Em aberto"],datasets:[{data:[rec,abertoC],backgroundColor:["#16a34a","#ea580c"]}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>c.label+": "+brl(c.parsed)}}}}});
 }
-$("salvar").onclick=()=>{ const f=lerLinks($("links").value); if(!f.length){ alert("Nenhum link válido do Google Sheets encontrado."); return; } localStorage.setItem("fontes",JSON.stringify(f)); carregar(); };
+$("salvar").onclick=()=>{ $("upd").textContent="Carregando…"; const f=lerLinks($("links").value); if(!f.length){ alert("Nenhum link válido do Google Sheets encontrado."); return; } localStorage.setItem("fontes",JSON.stringify(f)); carregar(); };
 $("limpar").onclick=()=>{ localStorage.removeItem("fontes"); carregar(); };
 $("rel").onclick=carregar; carregar(); setInterval(carregar,300000);
 })();
