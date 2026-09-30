@@ -52,9 +52,21 @@ function tabela(rows){
 const col=(head,...nomes)=>{ for(const n of nomes){ const i=head.findIndex(x=>x.startsWith(norm(n))); if(i>=0) return i; } return -1; };
 const colsTodas=(head,prefixo)=>head.map((x,i)=>x.startsWith(norm(prefixo))?i:-1).filter(i=>i>=0);
 
+function lerLinks(txt){
+  return txt.split(/\s+/).map(l=>{
+    const m=l.match(/\/d\/([a-zA-Z0-9-_]+)/); if(!m) return null;
+    const g=l.match(/[#&?]gid=(\d+)/);
+    return {id:m[1],gid:g?+g[1]:0};
+  }).filter(Boolean).filter((f,i,a)=>a.findIndex(x=>x.id===f.id&&x.gid===f.gid)===i);
+}
+function fontes(){
+  try{ const s=JSON.parse(localStorage.getItem("fontes")||"null"); if(s&&s.length) return s; }catch(e){}
+  if(C.SHEET_ID&&!C.SHEET_ID.startsWith("COLE")) return C.ABAS.map(a=>({id:C.SHEET_ID,gid:a.gid,nome:a.nome}));
+  return [];
+}
 async function baixa(aba){
   const alvo=aba.gid!=null?`gid=${encodeURIComponent(aba.gid)}`:`sheet=${encodeURIComponent(aba.nome)}`;
-  const url=`https://docs.google.com/spreadsheets/d/${C.SHEET_ID}/gviz/tq?tqx=out:csv&${alvo}&_=${Date.now()}`;
+  const url=`https://docs.google.com/spreadsheets/d/${aba.id}/gviz/tq?tqx=out:csv&${alvo}&_=${Date.now()}`;
   const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
   const t=await r.text();
   if(t.trimStart().startsWith("<")) throw new Error("A planilha não está compartilhada como 'qualquer pessoa com o link'");
@@ -64,12 +76,14 @@ async function baixa(aba){
 let gTent,gRec;
 async function carregar(){
   const msg=$("msg"); msg.style.display="none";
-  if(C.SHEET_ID.startsWith("COLE")){ msg.textContent="Falta configurar o ID da planilha no arquivo config.js."; msg.style.display="block"; $("upd").textContent="Sem planilha configurada"; return; }
+  const FONTES=fontes();
+  $("links").value=FONTES.map(f=>`https://docs.google.com/spreadsheets/d/${f.id}/edit#gid=${f.gid||0}`).join("\n");
+  if(!FONTES.length){ msg.textContent="Cole o link da planilha (uma linha por aba) no quadro 'Conectar planilha' e clique em Salvar."; msg.style.display="block"; $("conf").open=true; $("upd").textContent="Sem planilha conectada"; return; }
   $("upd").textContent="Atualizando…";
   const dias={}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,abertoC=0;
   let pPago=0,pAber=0,pN=0,pNPagos=0,pTotalDA=0;
   const erros=[];
-  for(const aba of C.ABAS){
+  for(const aba of FONTES){
     let rows; try{ rows=await baixa(aba); }catch(e){ erros.push((aba.nome||("gid "+aba.gid))+" ("+e.message+")"); continue; }
     const {head,data}=tabela(rows);
     if(!head.length){ erros.push((aba.nome||("gid "+aba.gid))+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
@@ -119,5 +133,7 @@ async function carregar(){
   gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:["Recuperado","Em aberto"],datasets:[{data:[rec,abertoC],backgroundColor:["#16a34a","#ea580c"]}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>c.label+": "+brl(c.parsed)}}}}});
 }
+$("salvar").onclick=()=>{ const f=lerLinks($("links").value); if(!f.length){ alert("Nenhum link válido do Google Sheets encontrado."); return; } localStorage.setItem("fontes",JSON.stringify(f)); carregar(); };
+$("limpar").onclick=()=>{ localStorage.removeItem("fontes"); carregar(); };
 $("rel").onclick=carregar; carregar(); setInterval(carregar,300000);
 })();

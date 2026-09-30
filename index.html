@@ -32,6 +32,12 @@ h2{font-size:1rem;margin:0 0 10px}
 </header>
 <div id="msg"></div>
 <main>
+  <details class="card" id="conf" style="margin-bottom:12px">
+    <summary style="cursor:pointer;font-weight:600">Conectar planilha</summary>
+    <p class="sub">No Google Sheets: <b>Compartilhar → Qualquer pessoa com o link → Leitor</b>. Depois clique em cada aba, copie o link da barra do navegador e cole aqui, <b>um link por linha</b> (um por aba).</p>
+    <textarea id="links" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=0"></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px"><button id="salvar">Salvar e carregar</button><button id="limpar" style="background:var(--mut)">Limpar</button></div>
+  </details>
   <section class="grid">
     <div class="card"><div class="l">Valor atual total</div><div class="v" id="kTotal">–</div><div class="s" id="kTotalS"></div></div>
     <div class="card"><div class="l">Tentativas feitas</div><div class="v" id="kTent">–</div><div class="s" id="kTentS"></div></div>
