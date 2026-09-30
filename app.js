@@ -24,7 +24,7 @@ function money(s){
   let x=String(s).replace(/[^\d,.-]/g,"");
   if(!x) return 0;
   if(x.includes(",")) x=x.replace(/\./g,"").replace(",",".");
-  else if((x.match(/\./g)||[]).length>1) x=x.replace(/\./g,"");
+  else if(/^-?\d{1,3}(\.\d{3})+$/.test(x)) x=x.replace(/\./g,"");
   const n=parseFloat(x); return isNaN(n)?0:n;
 }
 function isPago(s){
@@ -32,14 +32,21 @@ function isPago(s){
   if(C.PALAVRAS_NAO_PAGO.some(p=>n.includes(norm(p)))) return false;
   return C.PALAVRAS_PAGO.some(p=>n.includes(norm(p)));
 }
-// extrai data dd/mm[/aaaa] de um texto; retorna "aaaa-mm-dd" ou null
+// extrai data (com ano) de um texto; tolera "29/092026"; retorna "aaaa-mm-dd" ou null
 function dataDe(s){
-  const m=String(s||"").match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
-  if(!m) return null;
-  let y=m[3]?+m[3]:new Date().getFullYear(); if(y<100) y+=2000;
-  const d=+m[1],mo=+m[2]; if(d<1||d>31||mo<1||mo>12) return null;
+  s=String(s||"");
+  let m=s.match(/(\d{4})-(\d{2})-(\d{2})/), d,mo,y;
+  if(m){ y=+m[1];mo=+m[2];d=+m[3]; }
+  else{
+    m=s.match(/(\d{1,2})\s*[\/.-]\s*(\d{1,2})\s*[\/.-]?\s*(\d{4})/);
+    if(!m) return null;
+    d=+m[1];mo=+m[2];y=+m[3];
+    if(mo>12&&d<=12){ const t=d;d=mo;mo=t; }
+  }
+  if(d<1||d>31||mo<1||mo>12) return null;
   return `${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 }
+const proc=s=>String(s||"").replace(/\.0+$/,"").replace(/\D/g,"");
 // acha a linha de cabeçalho (a que contém "Nome do Contribuinte") e devolve objetos por coluna
 function tabela(rows){
   let h=rows.findIndex(r=>r.some(c=>norm(c).includes("contribuinte")) && r.some(c=>/valor|situacao|parcela|tentativa/.test(norm(c))));
@@ -80,23 +87,32 @@ async function carregar(){
   $("links").value=FONTES.map(f=>`https://docs.google.com/spreadsheets/d/${f.id}/edit#gid=${f.gid||0}`).join("\n");
   if(!FONTES.length){ msg.textContent="Cole o link da planilha (uma linha por aba) no quadro 'Conectar planilha' e clique em Salvar."; msg.style.display="block"; $("conf").open=true; $("upd").textContent="Sem planilha conectada"; return; }
   $("upd").textContent="Atualizando…";
-  const dias={}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,abertoC=0;
-  let pPago=0,pAber=0,pN=0,pNPagos=0,pTotalDA=0;
+  const dias={}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,parcC=0,parcCN=0,abertoC=0;
+  const pagasPorProc={}, parcelas=[];
   const erros=[],resumo=[];
   for(const aba of FONTES){
     let rows; try{ rows=await baixa(aba); }catch(e){ erros.push((aba.nome||("gid "+aba.gid))+" ("+e.message+")"); continue; }
     const {head,data}=tabela(rows);
-    if(!head.length){ erros.push((aba.nome||("gid "+aba.gid))+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
-    const iSit=col(head,"situacao");
-    const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":"parcelamento");
-    resumo.push(`aba gid ${aba.gid||0}: ${tipo==="cobranca"?"cobrança":"parcelamento"}, ${data.length} linhas`);
+    const nomeAba=aba.nome||("gid "+(aba.gid||0));
+    if(!head.length){ erros.push(nomeAba+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
+    const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":(head.some(x=>x.includes("valor da parcela"))?"parcelamento":"outra"));
+    if(tipo==="outra") continue;
+    resumo.push(`${nomeAba}: ${tipo==="cobranca"?"cobrança":"parcelamento"}, ${data.length} linhas`);
+    const iSit=col(head,"situacao"), iProc=col(head,"processo");
     if(tipo==="cobranca"){
       const iVal=col(head,"valor atual");
-      const iTent=colsTodas(head,"tentativa");
+      const iTent=colsTodas(head,"tentativa"), iRes=colsTodas(head,"resultado"), iObs=col(head,"observac");
       data.forEach(r=>{
-        linhasC++;
-        const v=money(r[iVal]); totalG+=v;
-        if(isPago(r[iSit])){ rec+=v; recN++; } else abertoC+=v;
+        const v=money(r[iVal]);
+        if(!v && !proc(r[iProc])) return;            // linha vazia / de teste
+        linhasC++; totalG+=v;
+        const textos=iTent.map(i=>r[i]||"").concat(iObs>=0?[r[iObs]||""]:[]);
+        // "(2/4 parcelas pagas)" -> guarda por processo
+        for(const t of textos){ const m=String(t).match(/(\d+)\s*\/\s*(\d+)\s*parcelas?\s*pagas?/i); if(m){ pagasPorProc[proc(r[iProc])]={pagas:+m[1],total:+m[2]}; break; } }
+        const pago=isPago(r[iSit])||iRes.some(i=>isPago(r[i]));
+        if(pago){ rec+=v; recN++; }
+        else if(norm(r[iSit]).includes("parcelad")||pagasPorProc[proc(r[iProc])]){ parcC+=v; parcCN++; }
+        else abertoC+=v;
         iTent.forEach(i=>{
           const cel=(r[i]||"").trim(); if(!cel) return;
           tent++; const d=dataDe(cel);
@@ -106,32 +122,38 @@ async function carregar(){
     } else {
       const iPar=col(head,"valor da parcela"), iQ=col(head,"qtde de parcelas","qtd"), iDA=col(head,"valor total");
       data.forEach(r=>{
-        const vp=money(r[iPar]), q=Math.round(money(r[iQ]))||0, tot=vp*q; pN++;
-        pTotalDA+=money(r[iDA]);
-        if(isPago(r[iSit])){ pPago+=tot; pNPagos++; } else pAber+=tot;
+        const vp=money(r[iPar]), totDA=money(r[iDA]); if(!vp) return;
+        let q=iQ>=0&&!/[\/-]/.test(r[iQ]||"")?Math.round(money(r[iQ])):0;
+        if(!(q>=1&&q<=420)) q=totDA?Math.round(totDA/vp):1;   // coluna vazia: deduz pelo total / parcela
+        parcelas.push({proc:proc(r[iProc]),vp,q,sit:r[iSit]});
       });
     }
   }
-  if(erros.length){ msg.textContent="Não consegui ler: "+erros.join(", ")+". Confira o nome da aba em config.js e se a planilha está compartilhada como 'qualquer pessoa com o link'."; msg.style.display="block"; }
+  // parcelamento: pagas (texto "x/y parcelas pagas" da cobrança) x a receber
+  let pPago=0,pAber=0,pNPagos=0;
+  parcelas.forEach(p=>{
+    const info=pagasPorProc[p.proc]; const q=p.q; const x=info?Math.min(info.pagas,q):(isPago(p.sit)?q:0);
+    pPago+=p.vp*x; pAber+=p.vp*(q-x); if(x>=q) pNPagos++;
+  });
+  if(erros.length){ msg.textContent="Não consegui ler: "+erros.join(", ")+". Confira se a planilha está compartilhada como 'qualquer pessoa com o link' e se os links colados estão certos."; msg.style.display="block"; }
 
   $("kTotal").textContent=brl(totalG); $("kTotalS").textContent=linhasC+" contribuintes na cobrança";
   $("kTent").textContent=tent; $("kTentS").textContent=tentSemData?tentSemData+" sem data legível":"";
-  $("kRec").textContent=brl(rec); $("kRecS").textContent=recN+" pagos"+(totalG?" · "+(rec/totalG*100).toFixed(1)+"% do total":"");
+  $("kRec").textContent=brl(rec); $("kRecS").textContent=recN+" guias pagas"+(totalG?" · "+(rec/totalG*100).toFixed(1)+"% do total":"")+(pPago?" · + "+brl(pPago)+" em parcelas pagas":"");
   $("kAReceber").textContent=brl(pAber); $("kARecS").textContent="parcelas ainda não pagas";
   $("pPago").textContent=brl(pPago); $("pAber").textContent=brl(pAber);
   const pt=pPago+pAber; $("pBar").style.width=(pt?pPago/pt*100:0)+"%";
-  $("pInfo").textContent=pN+" parcelamentos ("+pNPagos+" quitados)";
+  $("pInfo").textContent=parcelas.length+" parcelamentos ("+pNPagos+" quitados)";
   $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR")+" · "+resumo.join(" · ");
 
   const ks=Object.keys(dias).sort();
-  // preenche dias sem tentativas com 0
   const lab=[],val=[];
   if(ks.length){ for(let d=new Date(ks[0]+"T00:00");d<=new Date(ks[ks.length-1]+"T00:00");d.setDate(d.getDate()+1)){
     const k=d.toISOString().slice(0,10); lab.push(k.split("-").reverse().slice(0,2).join("/")); val.push(dias[k]||0);} }
   gTent&&gTent.destroy(); gRec&&gRec.destroy();
   gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[{label:"Tentativas",data:val,borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.15)",fill:true,tension:.25,pointRadius:3}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
-  gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:["Recuperado","Em aberto"],datasets:[{data:[rec,abertoC],backgroundColor:["#16a34a","#ea580c"]}]},
+  gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:["Recuperado","Parcelado","Em aberto"],datasets:[{data:[rec,parcC,abertoC],backgroundColor:["#16a34a","#7c3aed","#ea580c"]}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>c.label+": "+brl(c.parsed)}}}}});
 }
 $("salvar").onclick=()=>{ $("upd").textContent="Carregando…"; const f=lerLinks($("links").value); if(!f.length){ alert("Nenhum link válido do Google Sheets encontrado."); return; } localStorage.setItem("fontes",JSON.stringify(f)); carregar(); };
