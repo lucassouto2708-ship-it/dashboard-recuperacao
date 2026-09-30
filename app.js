@@ -173,5 +173,13 @@ async function carregar0(){
 }
 $("salvar").onclick=()=>{ $("upd").textContent="Carregando…"; const f=lerLinks($("links").value); if(!f.length){ alert("Nenhum link válido do Google Sheets encontrado."); return; } localStorage.setItem("fontes",JSON.stringify(f)); carregar(); };
 $("limpar").onclick=()=>{ localStorage.removeItem("fontes"); carregar(); };
+$("pdf").onclick=async()=>{
+  const r=document.documentElement, ant=r.dataset.theme, tit=document.title;
+  r.dataset.theme="light"; await carregar();            // PDF sempre em tema claro
+  document.title="Painel-Recuperacao-"+new Date().toISOString().slice(0,10);
+  const volta=()=>{ document.title=tit; r.dataset.theme=ant; window.removeEventListener("afterprint",volta); carregar(); };
+  window.addEventListener("afterprint",volta);
+  setTimeout(()=>window.print(),300);                   // espera os gráficos desenharem
+};
 $("rel").onclick=carregar; carregar(); setInterval(carregar,300000);
 })();
