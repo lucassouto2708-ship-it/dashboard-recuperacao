@@ -49,8 +49,8 @@ function tabela(rows){
   const data=rows.slice(h+1).filter(r=>r.some(c=>(c||"").trim()) && (r[0]||"").trim());
   return {head,data};
 }
-const col=(head,...nomes)=>{ for(const n of nomes){ const i=head.findIndex(x=>x.startsWith(norm(n))); if(i>=0) return i; } return -1; };
-const colsTodas=(head,prefixo)=>head.map((x,i)=>x.startsWith(norm(prefixo))?i:-1).filter(i=>i>=0);
+const col=(head,...nomes)=>{ for(const n of nomes){ const i=head.findIndex(x=>x.includes(norm(n))); if(i>=0) return i; } return -1; };
+const colsTodas=(head,prefixo)=>head.map((x,i)=>x.includes(norm(prefixo))?i:-1).filter(i=>i>=0);
 
 function lerLinks(txt){
   return txt.split(/\s+/).map(l=>{
@@ -66,7 +66,7 @@ function fontes(){
 }
 async function baixa(aba){
   const alvo=aba.gid!=null?`gid=${encodeURIComponent(aba.gid)}`:`sheet=${encodeURIComponent(aba.nome)}`;
-  const url=`https://docs.google.com/spreadsheets/d/${aba.id}/gviz/tq?tqx=out:csv&${alvo}&_=${Date.now()}`;
+  const url=`https://docs.google.com/spreadsheets/d/${aba.id}/gviz/tq?tqx=out:csv&headers=0&${alvo}&_=${Date.now()}`;
   const r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
   const t=await r.text();
   if(t.trimStart().startsWith("<")) throw new Error("A planilha não está compartilhada como 'qualquer pessoa com o link'");
@@ -82,13 +82,14 @@ async function carregar(){
   $("upd").textContent="Atualizando…";
   const dias={}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,abertoC=0;
   let pPago=0,pAber=0,pN=0,pNPagos=0,pTotalDA=0;
-  const erros=[];
+  const erros=[],resumo=[];
   for(const aba of FONTES){
     let rows; try{ rows=await baixa(aba); }catch(e){ erros.push((aba.nome||("gid "+aba.gid))+" ("+e.message+")"); continue; }
     const {head,data}=tabela(rows);
     if(!head.length){ erros.push((aba.nome||("gid "+aba.gid))+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
     const iSit=col(head,"situacao");
-    const tipo=aba.tipo||(head.some(x=>x.startsWith("tentativa"))?"cobranca":"parcelamento");
+    const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":"parcelamento");
+    resumo.push(`aba gid ${aba.gid||0}: ${tipo==="cobranca"?"cobrança":"parcelamento"}, ${data.length} linhas`);
     if(tipo==="cobranca"){
       const iVal=col(head,"valor atual");
       const iTent=colsTodas(head,"tentativa");
@@ -120,7 +121,7 @@ async function carregar(){
   $("pPago").textContent=brl(pPago); $("pAber").textContent=brl(pAber);
   const pt=pPago+pAber; $("pBar").style.width=(pt?pPago/pt*100:0)+"%";
   $("pInfo").textContent=pN+" parcelamentos ("+pNPagos+" quitados)";
-  $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR");
+  $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR")+" · "+resumo.join(" · ");
 
   const ks=Object.keys(dias).sort();
   // preenche dias sem tentativas com 0
