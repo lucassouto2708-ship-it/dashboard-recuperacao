@@ -90,6 +90,8 @@ async function baixa(aba){
 }
 
 let gTent,gRec;
+function cor(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+$("tema").onclick=()=>{ const t=document.documentElement.dataset.theme==="dark"?"light":"dark"; document.documentElement.dataset.theme=t; try{localStorage.setItem("tema",t);}catch(e){} carregar(); };
 async function carregar(){ try{ await carregar0(); }catch(e){ const m=$("msg"); m.textContent="Erro ao processar: "+e.message; m.style.display="block"; $("upd").textContent="Erro"; console.error(e); } }
 async function carregar0(){
   const msg=$("msg"); msg.style.display="none";
@@ -161,10 +163,13 @@ async function carregar0(){
   if(ks.length){ for(let d=new Date(ks[0]+"T00:00");d<=new Date(ks[ks.length-1]+"T00:00");d.setDate(d.getDate()+1)){
     const k=d.toISOString().slice(0,10); lab.push(k.split("-").reverse().slice(0,2).join("/")); val.push(dias[k]||0);} }
   gTent&&gTent.destroy(); gRec&&gRec.destroy();
-  gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[{label:"Tentativas",data:val,borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.15)",fill:true,tension:.25,pointRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
-  gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:["Recuperado","Parcelado","Em aberto"],datasets:[{data:[rec,parcC,abertoC],backgroundColor:["#16a34a","#7c3aed","#ea580c"]}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>c.label+": "+brl(c.parsed)}}}}});
+  Chart.defaults.font.family="Inter,system-ui,sans-serif"; Chart.defaults.color=cor("--mut");
+  const grade=cor("--grid"), azul=cor("--pri"), verde=cor("--ok"), laranja=cor("--warn");
+  $("tEmpty").style.display=val.length?"none":"grid";
+  gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[{label:"Tentativas",data:val,borderColor:azul,backgroundColor:azul+"22",fill:true,tension:0,pointRadius:3,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
+  gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:["Recuperado","Parcelado","Em aberto"],datasets:[{data:[rec,parcC,abertoC],backgroundColor:[verde,azul,laranja],borderColor:cor("--surf"),borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:c=>c.label+": "+brl(c.parsed)}}}}});
 }
 $("salvar").onclick=()=>{ $("upd").textContent="Carregando…"; const f=lerLinks($("links").value); if(!f.length){ alert("Nenhum link válido do Google Sheets encontrado."); return; } localStorage.setItem("fontes",JSON.stringify(f)); carregar(); };
 $("limpar").onclick=()=>{ localStorage.removeItem("fontes"); carregar(); };
