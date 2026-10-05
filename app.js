@@ -214,7 +214,7 @@ async function carregar0(){
   $("kTent").textContent=tent; $("kTentS").textContent=tentSemData?tentSemData+" sem data legível":"";
   $("kRec").textContent=brl(rec); $("kRecS").textContent=recN+" guias pagas"+(totalG?" · "+(rec/totalG*100).toFixed(1)+"% do total":"")+(pPago?" · + "+brl(pPago)+" em parcelas pagas":"");
   $("kAReceber").textContent=brl(pAber); $("kARecS").textContent="parcelas ainda não pagas";
-  $("pPago").textContent=brl(pPago); $("pAber").textContent=brl(pAber);
+  $("pTotal").textContent=brl(pPago+pAber); $("pPago").textContent=brl(pPago); $("pAber").textContent=brl(pAber);
   const pt=pPago+pAber; $("pBar").style.width=(pt?pPago/pt*100:0)+"%";
   $("pInfo").textContent=parcelas.length+" parcelamentos ("+pNPagos+" quitados)"+(pY?" · "+pX+" de "+pY+" parcelas pagas":"");
   $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR")+" · "+resumo.join(" · ");
