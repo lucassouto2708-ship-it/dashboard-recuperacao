@@ -122,6 +122,7 @@ function renderFluxo(ag,semData){
       if(i===4)td.className=atraso?"neg":"mut"; tr.appendChild(td); });
     tb.appendChild(tr);
   });
+  window.__venc=soma(venc);
   $("fEmpty").style.display=ag.length?"none":"block"; $("fWrap").style.display=ag.length?"grid":"none";
   const meses={}; ag.forEach(x=>{ const k=x.d<hoje?"0000-venc":x.d.slice(0,7); meses[k]=(meses[k]||0)+x.v; });
   const ks=Object.keys(meses).sort();
@@ -206,6 +207,7 @@ async function carregar0(){
   });
   agenda.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
   renderFluxo(agenda,semData);
+  const vencido=Math.min(window.__venc||0,parcC), parcEmDia=parcC-vencido;
   if(erros.length){ msg.textContent="Não consegui ler: "+erros.join(", ")+". Confira se a planilha está compartilhada como 'qualquer pessoa com o link' e se os links colados estão certos."; msg.style.display="block"; }
 
   $("kTotal").textContent=brl(totalG); $("kTotalS").textContent=linhasC+" contribuintes na cobrança";
@@ -227,8 +229,10 @@ async function carregar0(){
   $("tEmpty").style.display=val.length?"none":"grid";
   gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[{label:"Tentativas",data:val,borderColor:azul,backgroundColor:azul+"22",fill:true,tension:0,pointRadius:3,borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
-  gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:["Recuperado","Parcelado","Em aberto"],datasets:[{data:[rec,parcC,abertoC],backgroundColor:[verde,azul,laranja],borderColor:cor("--surf"),borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:c=>c.label+": "+brl(c.parsed)}}}}});
+  const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",abertoC,laranja]];
+  const tot=fat.reduce((t,x)=>t+x[1],0)||1, pct=v=>(v/tot*100).toFixed(1).replace(".",",")+"%";
+  gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:fat.map(x=>x[0]+" – "+pct(x[1])),datasets:[{data:fat.map(x=>x[1]),backgroundColor:fat.map(x=>x[2]),borderColor:cor("--surf"),borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:c=>fat[c.dataIndex][0]+": "+brl(c.parsed)+" ("+pct(c.parsed)+")"}}}}});
 }
 $("salvar").onclick=()=>{ $("upd").textContent="Carregando…"; const f=lerLinks($("links").value); if(!f.length){ alert("Nenhum link válido do Google Sheets encontrado."); return; } localStorage.setItem("fontes",JSON.stringify(f)); carregar(); };
 $("limpar").onclick=()=>{ localStorage.removeItem("fontes"); carregar(); };
