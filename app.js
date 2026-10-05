@@ -212,7 +212,7 @@ async function carregar0(){
 
   $("kTotal").textContent=brl(totalG); $("kTotalS").textContent=linhasC+" contribuintes na cobrança";
   $("kTent").textContent=tent; $("kTentS").textContent=tentSemData?tentSemData+" sem data legível":"";
-  $("kRec").textContent=brl(rec); $("kRecS").textContent=recN+" guias pagas"+(totalG?" · "+(rec/totalG*100).toFixed(1)+"% do total":"")+(pPago?" · + "+brl(pPago)+" em parcelas pagas":"");
+  $("kRec").textContent=brl(rec); $("kRecS").textContent="";
   $("kAReceber").textContent=brl(pAber); $("kARecS").textContent="parcelas ainda não pagas";
   $("pTotal").textContent=brl(pPago+pAber); $("pPago").textContent=brl(pPago); $("pAber").textContent=brl(pAber);
   const pt=pPago+pAber; $("pBar").style.width=(pt?pPago/pt*100:0)+"%";
