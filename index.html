@@ -69,9 +69,24 @@ textarea:focus,button:focus-visible{outline:2px solid var(--pri);outline-offset:
   .tools,#conf,#msg{display:none!important}
   .top .in{padding:0 0 8px}.bar .in{padding:6px 0}.wrap{padding:12px 0;max-width:none}
   .panel,.kpi{break-inside:avoid;box-shadow:none}
+  .tw{max-height:none;overflow:visible}
   .cols{grid-template-columns:2fr 1fr}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+.fk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--s3);margin-bottom:var(--s4)}
+.fk div{border:1px solid var(--bd);border-radius:4px;padding:var(--s2) var(--s3);background:var(--surf2)}
+.fk span{display:block;font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+.fk b{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+#fWrap{display:none;grid-template-columns:1fr 1fr;gap:var(--s4)}
+@media(max-width:900px){#fWrap{grid-template-columns:1fr}}
+.tw{max-height:300px;overflow:auto;border:1px solid var(--bd);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{position:sticky;top:0;background:var(--surf2);text-align:left;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--mut);padding:var(--s2) var(--s3);border-bottom:1px solid var(--bd)}
+td{padding:6px var(--s3);border-bottom:1px solid var(--grid)}
+tbody tr:nth-child(even){background:var(--surf2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+td.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
 </style>
 <script>try{var t=localStorage.getItem("tema");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
@@ -140,8 +155,19 @@ textarea:focus,button:focus-visible{outline:2px solid var(--pri);outline-offset:
       </section>
     </div>
   </div>
+  <section class="panel" id="fluxo">
+    <div class="hd"><h2><svg class="i"><use href="#i-cash"/></svg>Fluxo de caixa previsto – parcelamentos</h2><span class="sub">Saldo a receber distribuído pelas datas da coluna VENCIMENTOS</span></div>
+    <div class="bd">
+      <div class="fk"><div><span>Total a receber</span><b id="fTotal">–</b></div><div><span>Vencidas (conferir)</span><b id="fVenc" style="color:var(--err)">–</b></div><div><span>Próximos 30 dias</span><b id="fProx">–</b></div><div><span>Sem data informada</span><b id="fSem">–</b></div></div>
+      <div id="fEmpty" class="sub" style="display:none">Nenhuma parcela futura encontrada. Preencha a coluna VENCIMENTOS (ex.: 30/11; 22/12) na aba de parcelamento.</div>
+      <div id="fWrap">
+        <div class="chart" style="height:260px"><canvas id="cFluxo"></canvas></div>
+        <div class="tw"><table id="tFluxo"><thead><tr><th>Vencimento</th><th>Contribuinte</th><th>Processo</th><th class="num">Valor</th><th>Situação</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
 </main>
-<script src="config.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="config.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>
