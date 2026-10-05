@@ -107,7 +107,7 @@ async function carregar0(){
     const {head,data}=tabela(rows);
     const nomeAba=aba.nome||("gid "+(aba.gid||0));
     if(!head.length){ erros.push(nomeAba+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
-    const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":(head.some(x=>x.includes("valor da parcela"))?"parcelamento":"outra"));
+    const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":(head.some(x=>x.includes("valor da parcela")||x.includes("parcelas pagas")||x.includes("qtde de parcelas"))?"parcelamento":"outra"));
     if(tipo==="outra") continue;
     resumo.push(`${nomeAba}: ${tipo==="cobranca"?"cobrança":"parcelamento"}, ${data.length} linhas`);
     const iSit=col(head,"situacao"), iProc=col(head,"processo");
@@ -132,20 +132,28 @@ async function carregar0(){
         });
       });
     } else {
-      const iPar=col(head,"valor da parcela"), iQ=col(head,"qtde de parcelas","qtd"), iDA=col(head,"valor total");
+      const iPar=col(head,"valor da parcela"), iPaga=col(head,"parcelas pagas"), iQ=col(head,"qtde de parcelas","qtd"), iDA=col(head,"valor total");
       data.forEach(r=>{
-        const vp=money(r[iPar]), totDA=money(r[iDA]); if(!vp) return;
+        const totDA=money(r[iDA]);
+        if(iPar<0&&iPaga>=0){                       // layout novo: "R$ PARCELAS PAGAS" (valor já pago) + "QTDE" como pagas/total (ex.: 2/4)
+          if(!totDA) return;
+          const m=String(r[iQ]||"").match(/(\d+)\s*\/\s*(\d+)/);
+          parcelas.push({novo:true,tot:totDA,pago:Math.min(money(r[iPaga]),totDA),x:m?+m[1]:0,y:m?+m[2]:0});
+          return;
+        }
+        const vp=money(r[iPar]); if(!vp) return;     // layout antigo: valor da parcela x quantidade
         let q=iQ>=0&&!/[\/-]/.test(r[iQ]||"")?Math.round(money(r[iQ])):0;
-        if(!(q>=1&&q<=420)) q=totDA?Math.round(totDA/vp):1;   // coluna vazia: deduz pelo total / parcela
+        if(!(q>=1&&q<=420)) q=totDA?Math.round(totDA/vp):1;
         parcelas.push({proc:proc(r[iProc]),vp,q,sit:r[iSit]});
       });
     }
   }
   // parcelamento: pagas (texto "x/y parcelas pagas" da cobrança) x a receber
-  let pPago=0,pAber=0,pNPagos=0;
+  let pPago=0,pAber=0,pNPagos=0,pX=0,pY=0;
   parcelas.forEach(p=>{
+    if(p.novo){ pPago+=p.pago; pAber+=p.tot-p.pago; if(p.tot-p.pago<0.01) pNPagos++; pX+=p.x; pY+=p.y; return; }
     const info=pagasPorProc[p.proc]; const q=p.q; const x=info?Math.min(info.pagas,q):(isPago(p.sit)?q:0);
-    pPago+=p.vp*x; pAber+=p.vp*(q-x); if(x>=q) pNPagos++;
+    pPago+=p.vp*x; pAber+=p.vp*(q-x); if(x>=q) pNPagos++; pX+=x; pY+=q;
   });
   if(erros.length){ msg.textContent="Não consegui ler: "+erros.join(", ")+". Confira se a planilha está compartilhada como 'qualquer pessoa com o link' e se os links colados estão certos."; msg.style.display="block"; }
 
@@ -155,7 +163,7 @@ async function carregar0(){
   $("kAReceber").textContent=brl(pAber); $("kARecS").textContent="parcelas ainda não pagas";
   $("pPago").textContent=brl(pPago); $("pAber").textContent=brl(pAber);
   const pt=pPago+pAber; $("pBar").style.width=(pt?pPago/pt*100:0)+"%";
-  $("pInfo").textContent=parcelas.length+" parcelamentos ("+pNPagos+" quitados)";
+  $("pInfo").textContent=parcelas.length+" parcelamentos ("+pNPagos+" quitados)"+(pY?" · "+pX+" de "+pY+" parcelas pagas":"");
   $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR")+" · "+resumo.join(" · ");
 
   const ks=Object.keys(dias).sort();
