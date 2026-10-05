@@ -107,8 +107,8 @@ async function carregar0(){
     const {head,data}=tabela(rows);
     const nomeAba=aba.nome||("gid "+(aba.gid||0));
     if(!head.length){ erros.push(nomeAba+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
-    const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":(head.some(x=>x.includes("valor da parcela")||x.includes("parcelas pagas")||x.includes("qtde de parcelas"))?"parcelamento":"outra"));
-    if(tipo==="outra") continue;
+    const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":(head.some(x=>/parcela|vencimento|valor total/.test(x))?"parcelamento":"outra"));
+    if(tipo==="outra"){ erros.push(nomeAba+" (aba não reconhecida; colunas encontradas: "+JSON.stringify(head.filter(Boolean).slice(0,14))+")"); continue; }
     resumo.push(`${nomeAba}: ${tipo==="cobranca"?"cobrança":"parcelamento"}, ${data.length} linhas`);
     const iSit=col(head,"situacao"), iProc=col(head,"processo");
     if(tipo==="cobranca"){
@@ -132,7 +132,7 @@ async function carregar0(){
         });
       });
     } else {
-      const iPar=col(head,"valor da parcela"), iPaga=col(head,"parcelas pagas"), iQ=col(head,"qtde de parcelas","qtd"), iDA=col(head,"valor total");
+      const iPar=col(head,"valor da parcela","valor parcela"), iPaga=col(head,"parcelas pagas","valor pago","r$ parc","pago"), iQ=col(head,"qtde de parcelas","qtd","parcelas"), iDA=col(head,"valor total","valor da d","valor d"); const antes=parcelas.length;
       data.forEach(r=>{
         const totDA=money(r[iDA]);
         if(iPar<0&&iPaga>=0){                       // layout novo: "R$ PARCELAS PAGAS" (valor já pago) + "QTDE" como pagas/total (ex.: 2/4)
@@ -146,6 +146,7 @@ async function carregar0(){
         if(!(q>=1&&q<=420)) q=totDA?Math.round(totDA/vp):1;
         parcelas.push({proc:proc(r[iProc]),vp,q,sit:r[iSit]});
       });
+      if(parcelas.length===antes) erros.push(nomeAba+" (parcelamento: nenhuma linha com valor; colunas encontradas: "+JSON.stringify(head.filter(Boolean).slice(0,14))+"; 1ª linha de dados: "+JSON.stringify((data[0]||[]).slice(0,10))+")");
     }
   }
   // parcelamento: pagas (texto "x/y parcelas pagas" da cobrança) x a receber
