@@ -108,7 +108,27 @@ async function baixa(aba){
   throw ultimo;
 }
 
-let gTent,gRec,gFluxo;
+let gTent,gRec,gFluxo,gRes;
+// agrupa variações de escrita da coluna RESULTADO ("NUMERO INVALIDA", "Número inválido"...)
+function resNorm(v){
+  const t=norm(v);
+  if(t.includes("invalid")) return "Número inválido";
+  if(t.includes("aguard")) return "Aguardando resposta";
+  if(t.includes("fazer contato")) return "Fazer contato";
+  if(t.includes("quitad")) return "Guia quitada";
+  if(t.includes("parcelament")) return "Parcelamento";
+  const s=String(v).trim().toLowerCase(); return s.charAt(0).toUpperCase()+s.slice(1);
+}
+function renderRes(){
+  const ocultar=$("chkFC").checked, cnt=window.__res||{};
+  let ent=Object.entries(cnt).filter(([k])=>!(ocultar&&k==="Fazer contato")).sort((a,b)=>b[1]-a[1]);
+  const tot=ent.reduce((t,x)=>t+x[1],0)||1;
+  const palet={"Fazer contato":cor("--mut"),"Aguardando resposta":cor("--warn"),"Número inválido":cor("--err"),"Guia quitada":cor("--ok"),"Parcelamento":cor("--pri")};
+  $("rEmpty").style.display=ent.length?"none":"block"; $("rWrap").style.display=ent.length?"block":"none";
+  gRes&&gRes.destroy();
+  gRes=new Chart($("cRes"),{type:"bar",data:{labels:ent.map(([k,n])=>k+" – "+n+" ("+(n/tot*100).toFixed(1).replace(".",",")+"%)"),datasets:[{data:ent.map(x=>x[1]),backgroundColor:ent.map(([k])=>palet[k]||cor("--c1")),borderRadius:2,maxBarThickness:28}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.x+" contribuinte(s)"}}},scales:{x:{beginAtZero:true,ticks:{precision:0},grid:{color:cor("--grid")}},y:{grid:{display:false}}}}});
+}
 const dBR=d=>d.split("-").reverse().join("/");
 function renderFluxo(ag,semData){
   const hoje=hojeISO(), lim=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
@@ -142,7 +162,7 @@ async function carregar0(){
   $("links").value=FONTES.map(f=>`https://docs.google.com/spreadsheets/d/${f.id}/edit#gid=${f.gid||0}`).join("\n");
   if(!FONTES.length){ msg.textContent="Cole o link da planilha (uma linha por aba) no quadro 'Conectar planilha' e clique em Salvar."; msg.style.display="block"; $("conf").open=true; $("upd").textContent="Sem planilha conectada"; return; }
   $("upd").textContent="Atualizando…";
-  let outros=0,diagCab="",diagVals={};
+  let outros=0,diagCab="",diagVals={}; const resCount={};
   const dias={}, pess={"Maria Clara":{tot:0,dias:{}},"Carla":{tot:0,dias:{}}}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,parcC=0,parcCN=0,abertoC=0;
   const pagasPorProc={}, parcelas=[];
   const erros=[],resumo=[];
@@ -162,6 +182,8 @@ async function carregar0(){
         const v=money(r[iVal]);
         if(!v && !proc(r[iProc])) return;            // linha vazia / de teste
         linhasC++; totalG+=v;
+        const resVals=iRes.map(i=>(r[i]||"").trim()).filter(Boolean);       // último RESULTADO preenchido da linha
+        if(resVals.length){ const k=resNorm(resVals[resVals.length-1]); resCount[k]=(resCount[k]||0)+1; }
         const textos=iTent.map(i=>r[i]||"").concat(iObs>=0?[r[iObs]||""]:[]);
         // "(2/4 parcelas pagas)" -> guarda por processo
         for(const t of textos){ const m=String(t).match(/(\d+)\s*\/\s*(\d+)\s*parcelas?\s*pagas?/i); if(m){ pagasPorProc[proc(r[iProc])]={pagas:+m[1],total:+m[2]}; break; } }
@@ -246,6 +268,7 @@ async function carregar0(){
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
       plugins:{legend:{display:false},tooltip:{callbacks:{labelColor:c=>({borderColor:cores[c.datasetIndex],backgroundColor:cores[c.datasetIndex]})}}},
       scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
+  window.__res=resCount; renderRes();
   const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",Math.max(0,totalG-rec-parcTotal),laranja]];
   const tot=fat.reduce((t,x)=>t+x[1],0)||1, pct=v=>(v/tot*100).toFixed(1).replace(".",",")+"%";
   gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:fat.map(x=>x[0]+" – "+brl(x[1])+" ("+pct(x[1])+")"),datasets:[{data:fat.map(x=>x[1]),backgroundColor:fat.map(x=>x[2]),borderColor:cor("--surf"),borderWidth:2}]},
@@ -261,5 +284,6 @@ $("pdf").onclick=async()=>{
   window.addEventListener("afterprint",volta);
   setTimeout(()=>window.print(),300);                   // espera os gráficos desenharem
 };
+$("chkFC").onchange=renderRes;
 $("rel").onclick=carregar; carregar(); setInterval(carregar,300000);
 })();
