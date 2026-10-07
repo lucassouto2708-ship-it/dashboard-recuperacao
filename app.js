@@ -235,19 +235,16 @@ async function carregar0(){
   Chart.defaults.font.family="Inter,system-ui,sans-serif"; Chart.defaults.color=cor("--mut");
   const grade=cor("--grid"), azul=cor("--pri"), verde=cor("--ok"), laranja=cor("--warn"), c2=cor("--c2");
   $("tEmpty").style.display=val.length?"none":"grid";
-  $("tResp").innerHTML=""; 
-  [["Maria Clara",azul],["Carla",c2]].forEach(([n,c])=>{ const p=pess[n]; const sp=document.createElement("span");
-    sp.innerHTML=`<i style="background:${c}"></i><b></b> <em></em>`; sp.querySelector("b").textContent=n+": "+p.tot;
-    sp.querySelector("em").textContent="(hoje "+(p.dias[hojeK]||0)+")"; $("tResp").appendChild(sp); });
-  if(outros){ const top=Object.entries(diagVals).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([v,n])=>v+" ("+n+")").join(", ");
-    const sp=document.createElement("span"); sp.style.color="var(--mut)";
-    sp.textContent=(pess["Maria Clara"].tot+pess["Carla"].tot===0?"Nenhuma tentativa com Maria Clara/Carla reconhecida. ":"")+"Outros/sem identificação: "+outros+" · coluna J"+(diagCab?" ("+diagCab+")":"")+": "+top;
-    $("tResp").appendChild(sp); }
+  // Linha sólida só do total; Maria Clara e Carla ficam invisíveis no gráfico e aparecem apenas no tooltip (quadrados preenchidos)
+  const cMaria=cor("--c1"), cCarla=cor("--c2"), cTotal=azul, cores=[cTotal,cMaria,cCarla];
+  const oculta={borderColor:"transparent",backgroundColor:"transparent",fill:false,pointRadius:0,pointHoverRadius:0,borderWidth:0};
   gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[
-      {label:"Total",data:val,borderColor:cor("--mut"),borderDash:[4,4],backgroundColor:"transparent",tension:0,pointRadius:2,borderWidth:1.5},
-      {label:"Maria Clara",data:porP["Maria Clara"],borderColor:azul,backgroundColor:azul+"22",fill:true,tension:0,pointRadius:3,borderWidth:2},
-      {label:"Carla",data:porP["Carla"],borderColor:c2,backgroundColor:c2+"22",fill:true,tension:0,pointRadius:3,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
+      {label:"Total",data:val,borderColor:cTotal,backgroundColor:cTotal+"22",fill:true,tension:0,pointRadius:3,pointHoverRadius:5,borderWidth:2.5},
+      {label:"Maria Clara",data:porP["Maria Clara"],...oculta},
+      {label:"Carla",data:porP["Carla"],...oculta}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{labelColor:c=>({borderColor:cores[c.datasetIndex],backgroundColor:cores[c.datasetIndex]})}}},
+      scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
   const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",abertoC,laranja]];
   const tot=fat.reduce((t,x)=>t+x[1],0)||1, pct=v=>(v/tot*100).toFixed(1).replace(".",",")+"%";
   gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:fat.map(x=>x[0]+" – "+pct(x[1])),datasets:[{data:fat.map(x=>x[1]),backgroundColor:fat.map(x=>x[2]),borderColor:cor("--surf"),borderWidth:2}]},

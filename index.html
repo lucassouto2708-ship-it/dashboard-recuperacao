@@ -10,12 +10,12 @@
 <style>
 :root{
   --bg:#F5F6F8;--surf:#FFFFFF;--surf2:#F9FAFB;--tx:#1F2937;--mut:#6B7280;--bd:#E2E5E9;
-  --pri:#1E4E8C;--pri-l:#EAF2FF;--pri-tx:#FFFFFF;--ok:#16835B;--warn:#B7791F;--err:#C0392B;--grid:#EEF0F3;--c2:#0E7490;
+  --pri:#1E4E8C;--pri-l:#EAF2FF;--pri-tx:#FFFFFF;--ok:#16835B;--warn:#B7791F;--err:#C0392B;--grid:#EEF0F3;--c1:#9333EA;--c2:#EA580C;
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;
 }
 :root[data-theme="dark"]{
   --bg:#141A23;--surf:#1C2430;--surf2:#19202B;--tx:#E5E9F0;--mut:#9AA6B6;--bd:#2C3748;
-  --pri:#5B8FD6;--pri-l:#22314A;--pri-tx:#0F1722;--ok:#3BB88A;--warn:#D9A441;--err:#E0675A;--grid:#263142;--c2:#5BC0D8;
+  --pri:#5B8FD6;--pri-l:#22314A;--pri-tx:#0F1722;--ok:#3BB88A;--warn:#D9A441;--err:#E0675A;--grid:#263142;--c1:#C084FC;--c2:#FB923C;
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.45;background:var(--bg);color:var(--tx)}
@@ -141,7 +141,7 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
   <div class="cols">
     <section class="panel">
       <div class="hd"><h2><svg class="i"><use href="#i-line"/></svg>Tentativas por dia</h2></div>
-      <div class="bd"><div class="chips" id="tResp"></div><div class="chart"><canvas id="cTent"></canvas><div class="empty" id="tEmpty"><div><b>Sem tentativas com data</b><br>Preencha a data nas colunas TENTATIVA da planilha para ver a evolução diária.</div></div></div></div>
+      <div class="bd"><div class="chart"><canvas id="cTent"></canvas><div class="empty" id="tEmpty"><div><b>Sem tentativas com data</b><br>Preencha a data nas colunas TENTATIVA da planilha para ver a evolução diária.</div></div></div></div>
     </section>
     <div>
       <section class="panel">
@@ -171,7 +171,7 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
     </div>
   </section>
 </main>
-<script src="config.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="config.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>
