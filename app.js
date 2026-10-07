@@ -134,7 +134,7 @@ function renderFluxo(ag,semData){
   const hoje=hojeISO(), lim=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
   const soma=a=>a.reduce((t,x)=>t+x.v,0);
   const venc=ag.filter(x=>x.d<hoje), futuras=ag.filter(x=>x.d>=hoje), prox=futuras.filter(x=>x.d<=lim);
-  $("fTotal").textContent=brl(soma(ag)+semData); $("fVenc").textContent=brl(soma(venc)); $("fProx").textContent=brl(soma(prox)); $("fSem").textContent=brl(semData);
+  $("fTotal").textContent=brl(soma(ag)+semData); $("fVenc").textContent=brl(soma(venc)); $("fProx").textContent=brl(soma(prox)); $("fSem").textContent=brl(soma(futuras.filter(x=>x.d>lim)));
   const tb=$("tFluxo").querySelector("tbody"); tb.innerHTML="";
   ag.slice(0,300).forEach(x=>{
     const tr=document.createElement("tr"); const atraso=x.d<hoje;
