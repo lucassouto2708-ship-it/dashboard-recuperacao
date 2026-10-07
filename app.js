@@ -214,7 +214,8 @@ async function carregar0(){
   });
   agenda.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
   renderFluxo(agenda,semData);
-  const vencido=Math.min(window.__venc||0,pAber), parcEmDia=Math.max(0,pAber-vencido);   // mesma base do card "Parcelamento a receber"
+  const parcTotal=pPago+pAber;                                                          // tudo que foi parcelado (pago + a receber)
+  const vencido=Math.min(window.__venc||0,parcTotal), parcEmDia=Math.max(0,parcTotal-vencido);
   if(erros.length){ msg.textContent="Não consegui ler: "+erros.join(", ")+". Confira se a planilha está compartilhada como 'qualquer pessoa com o link' e se os links colados estão certos."; msg.style.display="block"; }
 
   $("kTotal").textContent=brl(totalG); $("kTotalS").textContent=linhasC+" contribuintes na cobrança";
@@ -245,7 +246,7 @@ async function carregar0(){
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
       plugins:{legend:{display:false},tooltip:{callbacks:{labelColor:c=>({borderColor:cores[c.datasetIndex],backgroundColor:cores[c.datasetIndex]})}}},
       scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
-  const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",Math.max(0,totalG-rec-pAber),laranja]];
+  const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",Math.max(0,totalG-rec-parcTotal),laranja]];
   const tot=fat.reduce((t,x)=>t+x[1],0)||1, pct=v=>(v/tot*100).toFixed(1).replace(".",",")+"%";
   gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:fat.map(x=>x[0]+" – "+brl(x[1])+" ("+pct(x[1])+")"),datasets:[{data:fat.map(x=>x[1]),backgroundColor:fat.map(x=>x[2]),borderColor:cor("--surf"),borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:c=>fat[c.dataIndex][0]+": "+brl(c.parsed)+" ("+pct(c.parsed)+")"}}}}});
