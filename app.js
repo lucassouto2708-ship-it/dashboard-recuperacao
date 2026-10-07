@@ -64,6 +64,7 @@ function vencimentos(txt){
   }
   return out;
 }
+const hojeISO=()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 const proc=s=>String(s||"").replace(/\.0+$/,"").replace(/\D/g,"");
 // acha a linha de cabeçalho (a que contém "Nome do Contribuinte") e devolve objetos por coluna
 function tabela(rows){
@@ -110,7 +111,7 @@ async function baixa(aba){
 let gTent,gRec,gFluxo;
 const dBR=d=>d.split("-").reverse().join("/");
 function renderFluxo(ag,semData){
-  const hoje=new Date().toISOString().slice(0,10), lim=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
+  const hoje=hojeISO(), lim=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
   const soma=a=>a.reduce((t,x)=>t+x.v,0);
   const venc=ag.filter(x=>x.d<hoje), futuras=ag.filter(x=>x.d>=hoje), prox=futuras.filter(x=>x.d<=lim);
   $("fTotal").textContent=brl(soma(ag)+semData); $("fVenc").textContent=brl(soma(venc)); $("fProx").textContent=brl(soma(prox)); $("fSem").textContent=brl(semData);
@@ -141,7 +142,7 @@ async function carregar0(){
   $("links").value=FONTES.map(f=>`https://docs.google.com/spreadsheets/d/${f.id}/edit#gid=${f.gid||0}`).join("\n");
   if(!FONTES.length){ msg.textContent="Cole o link da planilha (uma linha por aba) no quadro 'Conectar planilha' e clique em Salvar."; msg.style.display="block"; $("conf").open=true; $("upd").textContent="Sem planilha conectada"; return; }
   $("upd").textContent="Atualizando…";
-  const dias={}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,parcC=0,parcCN=0,abertoC=0;
+  const dias={}, pess={"Maria Clara":{tot:0,dias:{}},"Carla":{tot:0,dias:{}}}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,parcC=0,parcCN=0,abertoC=0;
   const pagasPorProc={}, parcelas=[];
   const erros=[],resumo=[];
   for(const aba of FONTES){
@@ -171,6 +172,9 @@ async function carregar0(){
           const cel=(r[i]||"").trim(); if(!cel) return;
           tent++; const d=dataDe(cel);
           if(d) dias[d]=(dias[d]||0)+1; else tentSemData++;
+          const resp=norm(r[i+1]);                       // responsável da tentativa = coluna ao lado (J p/ TENTATIVA 01, L p/ TENTATIVA 02)
+          const quem=resp.includes("maria clara")?"Maria Clara":(/\bcarla\b/.test(resp)?"Carla":null);
+          if(quem){ pess[quem].tot++; if(d) pess[quem].dias[d]=(pess[quem].dias[d]||0)+1; }
         });
       });
     } else {
@@ -220,15 +224,23 @@ async function carregar0(){
   $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR")+" · "+resumo.join(" · ");
 
   const ks=Object.keys(dias).sort();
-  const lab=[],val=[];
+  const lab=[],val=[],porP={"Maria Clara":[],"Carla":[]}, hojeK=hojeISO();
   if(ks.length){ for(let d=new Date(ks[0]+"T00:00");d<=new Date(ks[ks.length-1]+"T00:00");d.setDate(d.getDate()+1)){
-    const k=d.toISOString().slice(0,10); lab.push(k.split("-").reverse().slice(0,2).join("/")); val.push(dias[k]||0);} }
+    const k=d.toISOString().slice(0,10); lab.push(k.split("-").reverse().slice(0,2).join("/")); val.push(dias[k]||0);
+    for(const n in porP) porP[n].push(pess[n].dias[k]||0);} }
   gTent&&gTent.destroy(); gRec&&gRec.destroy();
   Chart.defaults.font.family="Inter,system-ui,sans-serif"; Chart.defaults.color=cor("--mut");
-  const grade=cor("--grid"), azul=cor("--pri"), verde=cor("--ok"), laranja=cor("--warn");
+  const grade=cor("--grid"), azul=cor("--pri"), verde=cor("--ok"), laranja=cor("--warn"), c2=cor("--c2");
   $("tEmpty").style.display=val.length?"none":"grid";
-  gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[{label:"Tentativas",data:val,borderColor:azul,backgroundColor:azul+"22",fill:true,tension:0,pointRadius:3,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
+  $("tResp").innerHTML=""; 
+  [["Maria Clara",azul],["Carla",c2]].forEach(([n,c])=>{ const p=pess[n]; const sp=document.createElement("span");
+    sp.innerHTML=`<i style="background:${c}"></i><b></b> <em></em>`; sp.querySelector("b").textContent=n+": "+p.tot;
+    sp.querySelector("em").textContent="(hoje "+(p.dias[hojeK]||0)+")"; $("tResp").appendChild(sp); });
+  gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[
+      {label:"Total",data:val,borderColor:cor("--mut"),borderDash:[4,4],backgroundColor:"transparent",tension:0,pointRadius:2,borderWidth:1.5},
+      {label:"Maria Clara",data:porP["Maria Clara"],borderColor:azul,backgroundColor:azul+"22",fill:true,tension:0,pointRadius:3,borderWidth:2},
+      {label:"Carla",data:porP["Carla"],borderColor:c2,backgroundColor:c2+"22",fill:true,tension:0,pointRadius:3,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
   const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",abertoC,laranja]];
   const tot=fat.reduce((t,x)=>t+x[1],0)||1, pct=v=>(v/tot*100).toFixed(1).replace(".",",")+"%";
   gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:fat.map(x=>x[0]+" – "+pct(x[1])),datasets:[{data:fat.map(x=>x[1]),backgroundColor:fat.map(x=>x[2]),borderColor:cor("--surf"),borderWidth:2}]},
