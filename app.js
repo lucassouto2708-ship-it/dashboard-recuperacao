@@ -142,6 +142,7 @@ async function carregar0(){
   $("links").value=FONTES.map(f=>`https://docs.google.com/spreadsheets/d/${f.id}/edit#gid=${f.gid||0}`).join("\n");
   if(!FONTES.length){ msg.textContent="Cole o link da planilha (uma linha por aba) no quadro 'Conectar planilha' e clique em Salvar."; msg.style.display="block"; $("conf").open=true; $("upd").textContent="Sem planilha conectada"; return; }
   $("upd").textContent="Atualizando…";
+  let outros=0,diagCab="",diagVals={};
   const dias={}, pess={"Maria Clara":{tot:0,dias:{}},"Carla":{tot:0,dias:{}}}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,parcC=0,parcCN=0,abertoC=0;
   const pagasPorProc={}, parcelas=[];
   const erros=[],resumo=[];
@@ -172,8 +173,10 @@ async function carregar0(){
           const cel=(r[i]||"").trim(); if(!cel) return;
           tent++; const d=dataDe(cel);
           if(d) dias[d]=(dias[d]||0)+1; else tentSemData++;
-          const resp=norm(r[i+1]);                       // responsável da tentativa = coluna ao lado (J p/ TENTATIVA 01, L p/ TENTATIVA 02)
-          const quem=resp.includes("maria clara")?"Maria Clara":(/\bcarla\b/.test(resp)?"Carla":null);
+          // responsável: coluna J (literal) ou a coluna ao lado da TENTATIVA
+          const qm=v=>{ const t=norm(v); return t.includes("maria clara")?"Maria Clara":(/\bcarla\b/.test(t)?"Carla":null); };
+          const quem=qm(r[9])||qm(r[i+1]); diagCab=head[9]||"";
+          if(!quem){ outros++; const v=((r[9]||"").trim()||"(vazio)").slice(0,30); diagVals[v]=(diagVals[v]||0)+1; }
           if(quem){ pess[quem].tot++; if(d) pess[quem].dias[d]=(pess[quem].dias[d]||0)+1; }
         });
       });
@@ -236,6 +239,10 @@ async function carregar0(){
   [["Maria Clara",azul],["Carla",c2]].forEach(([n,c])=>{ const p=pess[n]; const sp=document.createElement("span");
     sp.innerHTML=`<i style="background:${c}"></i><b></b> <em></em>`; sp.querySelector("b").textContent=n+": "+p.tot;
     sp.querySelector("em").textContent="(hoje "+(p.dias[hojeK]||0)+")"; $("tResp").appendChild(sp); });
+  if(outros){ const top=Object.entries(diagVals).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([v,n])=>v+" ("+n+")").join(", ");
+    const sp=document.createElement("span"); sp.style.color="var(--mut)";
+    sp.textContent=(pess["Maria Clara"].tot+pess["Carla"].tot===0?"Nenhuma tentativa com Maria Clara/Carla reconhecida. ":"")+"Outros/sem identificação: "+outros+" · coluna J"+(diagCab?" ("+diagCab+")":"")+": "+top;
+    $("tResp").appendChild(sp); }
   gTent=new Chart($("cTent"),{type:"line",data:{labels:lab,datasets:[
       {label:"Total",data:val,borderColor:cor("--mut"),borderDash:[4,4],backgroundColor:"transparent",tension:0,pointRadius:2,borderWidth:1.5},
       {label:"Maria Clara",data:porP["Maria Clara"],borderColor:azul,backgroundColor:azul+"22",fill:true,tension:0,pointRadius:3,borderWidth:2},
