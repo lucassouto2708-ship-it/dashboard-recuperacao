@@ -268,6 +268,11 @@ async function carregar0(){
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
       plugins:{legend:{display:false},tooltip:{callbacks:{labelColor:c=>({borderColor:cores[c.datasetIndex],backgroundColor:cores[c.datasetIndex]})}}},
       scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:grade}},x:{grid:{display:false}}}}});
+  // "legenda" abaixo do gráfico: total de tentativas geral e por responsável
+  $("tResp").innerHTML="";
+  [["Total",tent,cTotal],["Maria Clara",pess["Maria Clara"].tot,cMaria],["Carla",pess["Carla"].tot,cCarla]].forEach(([n,q,c])=>{
+    const sp=document.createElement("span"); const i=document.createElement("i"); i.style.background=c;
+    const b=document.createElement("b"); b.textContent=n+": "+q; sp.appendChild(i); sp.appendChild(b); $("tResp").appendChild(sp); });
   window.__res=resCount; renderRes();
   const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",Math.max(0,totalG-rec-parcTotal),laranja]];
   const tot=fat.reduce((t,x)=>t+x[1],0)||1, pct=v=>(v/tot*100).toFixed(1).replace(".",",")+"%";
