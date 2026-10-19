@@ -179,15 +179,18 @@ async function carregar0(){
       const iVal=col(head,"valor atual");
       const iTent=colsTodas(head,"tentativa"), iRes=colsTodas(head,"resultado"), iObs=col(head,"observac");
       // colunas que vão para o Excel exportado (na ordem da planilha)
-      const cOut=head.map((x,i)=>/^(nome do contribuinte|telefone|processo|valor atual|situacao|responsavel|tentativa|observac)/.test(x)?i:-1).filter(i=>i>=0);
-      if(!resCols.length) resCols=cOut.map(i=>String(headRaw[i]||"").replace(/\s*\(.*$/,"").trim());
+      // campos FIXOS: cada aba acha a coluna pelo nome do cabeçalho; se faltar (ex.: só um telefone), a célula fica vazia e nada desloca
+      const nth=(pref,n)=>{ let k=0; for(let i=0;i<head.length;i++) if(head[i].startsWith(pref)&&k++===n) return i; return -1; };
+      const campos=[["Nome do Contribuinte",nth("nome do contribuinte",0)],["Telefone 1",nth("telefone",0)],["Telefone 2",nth("telefone",1)],["Situação",iSit],["Processo",iProc],["Valor atual",iVal],
+        ["Responsável",nth("responsavel",0)],["Tentativa 01",nth("tentativa",0)],["Responsável (tentativa)",nth("responsavel",1)],["Tentativa 02",nth("tentativa",1)],["Observações",iObs]];
+      resCols=campos.map(c=>c[0]);
       data.forEach(r=>{
         const v=money(r[iVal]);
         if(!v && !proc(r[iProc])) return;            // linha vazia / de teste
         linhasC++; totalG+=v;
         const resVals=iRes.map(i=>(r[i]||"").trim()).filter(Boolean);       // último RESULTADO preenchido da linha
         if(resVals.length){ const k=resNorm(resVals[resVals.length-1]); resCount[k]=(resCount[k]||0)+1;
-          (resRows[k]=resRows[k]||[]).push(cOut.map(i=>{ if(i===iVal) return v; const x=String(r[i]||"").trim(); return /^(telefone|processo)/.test(head[i])?x.replace(/\.0+$/,""):x; })); }
+          (resRows[k]=resRows[k]||[]).push(campos.map(([nm,i])=>{ if(i<0) return ""; if(i===iVal) return v; const x=String(r[i]||"").trim(); return /^(Telefone|Processo)/.test(nm)?x.replace(/\.0+$/,""):x; })); }
         const textos=iTent.map(i=>r[i]||"").concat(iObs>=0?[r[iObs]||""]:[]);
         // "(2/4 parcelas pagas)" -> guarda por processo
         for(const t of textos){ const m=String(t).match(/(\d+)\s*\/\s*(\d+)\s*parcelas?\s*pagas?/i); if(m){ pagasPorProc[proc(r[iProc])]={pagas:+m[1],total:+m[2]}; break; } }
