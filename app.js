@@ -70,10 +70,10 @@ const proc=s=>String(s||"").replace(/\.0+$/,"").replace(/\D/g,"");
 function tabela(rows){
   let h=rows.findIndex(r=>r.some(c=>norm(c).includes("contribuinte")) && r.some(c=>/valor|situacao|parcela|tentativa/.test(norm(c))));
   if(h<0) h=rows.findIndex(r=>r.some(c=>/valor atual|valor da parcela|tentativa/.test(norm(c))));
-  if(h<0) return {head:[],data:[]};
+  if(h<0) return {head:[],data:[],headRaw:[]};
   const head=rows[h].map(norm);
   const data=rows.slice(h+1).filter(r=>r.some(c=>(c||"").trim()) && (r[0]||"").trim());
-  return {head,data};
+  return {head,data,headRaw:rows[h]};
 }
 const col=(head,...nomes)=>{ for(const n of nomes){ const i=head.findIndex(x=>x.includes(norm(n))); if(i>=0) return i; } return -1; };
 const colsTodas=(head,prefixo)=>head.map((x,i)=>x.includes(norm(prefixo))?i:-1).filter(i=>i>=0);
@@ -162,13 +162,13 @@ async function carregar0(){
   $("links").value=FONTES.map(f=>`https://docs.google.com/spreadsheets/d/${f.id}/edit#gid=${f.gid||0}`).join("\n");
   if(!FONTES.length){ msg.textContent="Cole o link da planilha (uma linha por aba) no quadro 'Conectar planilha' e clique em Salvar."; msg.style.display="block"; $("conf").open=true; $("upd").textContent="Sem planilha conectada"; return; }
   $("upd").textContent="Atualizando…";
-  let outros=0,diagCab="",diagVals={}; const resCount={};
+  let outros=0,diagCab="",diagVals={}; const resCount={}, resRows={}; let resCols=[];
   const dias={}, pess={"Maria Clara":{tot:0,dias:{}},"Carla":{tot:0,dias:{}}}; let totalG=0,linhasC=0,tent=0,tentSemData=0,rec=0,recN=0,parcC=0,parcCN=0,abertoC=0;
   const pagasPorProc={}, parcelas=[];
   const erros=[],resumo=[];
   for(const aba of FONTES){
     let rows; try{ rows=await baixa(aba); }catch(e){ erros.push((aba.nome||("gid "+aba.gid))+" ("+e.message+")"); continue; }
-    const {head,data}=tabela(rows);
+    const {head,data,headRaw}=tabela(rows);
     const nomeAba=aba.nome||("gid "+(aba.gid||0));
     if(!head.length){ erros.push(nomeAba+" (cabeçalho não encontrado; linhas lidas: "+rows.length+"; primeira linha: "+JSON.stringify((rows[0]||[]).slice(0,8))+")"); continue; }
     const tipo=aba.tipo||(head.some(x=>x.includes("tentativa"))?"cobranca":(head.some(x=>/parcela|vencimento|valor total/.test(x))?"parcelamento":"outra"));
@@ -178,12 +178,16 @@ async function carregar0(){
     if(tipo==="cobranca"){
       const iVal=col(head,"valor atual");
       const iTent=colsTodas(head,"tentativa"), iRes=colsTodas(head,"resultado"), iObs=col(head,"observac");
+      // colunas que vão para o Excel exportado (na ordem da planilha)
+      const cOut=head.map((x,i)=>/^(nome do contribuinte|telefone|processo|valor atual|situacao|responsavel|tentativa|observac)/.test(x)?i:-1).filter(i=>i>=0);
+      if(!resCols.length) resCols=cOut.map(i=>String(headRaw[i]||"").replace(/\s*\(.*$/,"").trim());
       data.forEach(r=>{
         const v=money(r[iVal]);
         if(!v && !proc(r[iProc])) return;            // linha vazia / de teste
         linhasC++; totalG+=v;
         const resVals=iRes.map(i=>(r[i]||"").trim()).filter(Boolean);       // último RESULTADO preenchido da linha
-        if(resVals.length){ const k=resNorm(resVals[resVals.length-1]); resCount[k]=(resCount[k]||0)+1; }
+        if(resVals.length){ const k=resNorm(resVals[resVals.length-1]); resCount[k]=(resCount[k]||0)+1;
+          (resRows[k]=resRows[k]||[]).push(cOut.map(i=>{ if(i===iVal) return v; const x=String(r[i]||"").trim(); return /^(telefone|processo)/.test(head[i])?x.replace(/\.0+$/,""):x; })); }
         const textos=iTent.map(i=>r[i]||"").concat(iObs>=0?[r[iObs]||""]:[]);
         // "(2/4 parcelas pagas)" -> guarda por processo
         for(const t of textos){ const m=String(t).match(/(\d+)\s*\/\s*(\d+)\s*parcelas?\s*pagas?/i); if(m){ pagasPorProc[proc(r[iProc])]={pagas:+m[1],total:+m[2]}; break; } }
@@ -273,7 +277,7 @@ async function carregar0(){
   [["Total",tent,cTotal],["Maria Clara",pess["Maria Clara"].tot,cMaria],["Carla",pess["Carla"].tot,cCarla]].forEach(([n,q,c])=>{
     const sp=document.createElement("span"); const i=document.createElement("i"); i.style.background=c;
     const b=document.createElement("b"); b.textContent=n+": "+q; sp.appendChild(i); sp.appendChild(b); $("tResp").appendChild(sp); });
-  window.__res=resCount; renderRes();
+  window.__res=resCount; window.__resRows=resRows; window.__resCols=resCols; renderRes();
   const fat=[["Recuperado",rec,verde],["Parcelado em dia",parcEmDia,azul],["Parcelado vencido",vencido,cor("--err")],["Em aberto",Math.max(0,totalG-rec-parcTotal),laranja]];
   const tot=fat.reduce((t,x)=>t+x[1],0)||1, pct=v=>(v/tot*100).toFixed(1).replace(".",",")+"%";
   gRec=new Chart($("cRec"),{type:"doughnut",data:{labels:fat.map(x=>x[0]+" – "+brl(x[1])+" ("+pct(x[1])+")"),datasets:[{data:fat.map(x=>x[1]),backgroundColor:fat.map(x=>x[2]),borderColor:cor("--surf"),borderWidth:2}]},
@@ -290,5 +294,20 @@ $("pdf").onclick=async()=>{
   setTimeout(()=>window.print(),300);                   // espera os gráficos desenharem
 };
 $("chkFC").onchange=renderRes;
+// Excel único: uma aba por resultado (mesma ordem do gráfico), colunas da planilha de cobrança
+$("btnXls").onclick=()=>{
+  const rows=window.__resRows||{}, cols=window.__resCols||[];
+  const ks=Object.keys(rows).sort((a,b)=>rows[b].length-rows[a].length);
+  if(!ks.length||typeof XLSX==="undefined"){ alert("Nada para exportar ainda."); return; }
+  const wb=XLSX.utils.book_new(), usados={};
+  ks.forEach(k=>{
+    const ws=XLSX.utils.aoa_to_sheet([cols].concat(rows[k]));
+    ws["!cols"]=cols.map((c,i)=>({wch:Math.min(40,Math.max(c.length+2,...rows[k].slice(0,200).map(r=>String(r[i]).length+2)))}));
+    ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows[k].length,c:cols.length-1}})};
+    let nome=k.replace(/[\\\/?*\[\]:]/g," ").slice(0,28); if(usados[nome]) nome+=" "+(usados[nome]+1); usados[nome]=(usados[nome]||0)+1;
+    XLSX.utils.book_append_sheet(wb,ws,nome);
+  });
+  XLSX.writeFile(wb,"Resultados-contatos-"+hojeISO()+".xlsx");
+};
 $("rel").onclick=carregar; carregar(); setInterval(carregar,300000);
 })();

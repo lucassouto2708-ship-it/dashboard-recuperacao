@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#F5F6F8;--surf:#FFFFFF;--surf2:#F9FAFB;--tx:#1F2937;--mut:#6B7280;--bd:#E2E5E9;
@@ -162,7 +163,8 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
   </div>
   <section class="panel" id="resultados">
     <div class="hd"><h2><svg class="i"><use href="#i-doc"/></svg>Resultado dos contatos</h2>
-      <label style="margin:0;font-weight:400;display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="chkFC"> Ocultar "Fazer contato"</label></div>
+      <div class="tools"><label style="margin:0;font-weight:400;display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="chkFC"> Ocultar "Fazer contato"</label>
+      <button class="btn sec" id="btnXls" title="Baixar Excel com uma aba para cada resultado"><svg class="i"><use href="#i-doc"/></svg>Baixar Excel</button></div></div>
     <div class="bd">
       <div id="rEmpty" class="sub" style="display:none">Nenhum resultado preenchido na coluna RESULTADO.</div>
       <div id="rWrap"><div class="chart" style="height:240px"><canvas id="cRes"></canvas></div></div>
@@ -181,7 +183,7 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
     </div>
   </section>
 </main>
-<script src="config.js?v=23"></script>
-<script src="app.js?v=23"></script>
+<script src="config.js?v=24"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>
