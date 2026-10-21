@@ -68,7 +68,9 @@ const hojeISO=()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getM
 const proc=s=>String(s||"").replace(/\.0+$/,"").replace(/\D/g,"");
 // acha a linha de cabeçalho (a que contém "Nome do Contribuinte") e devolve objetos por coluna
 function tabela(rows){
-  let h=rows.findIndex(r=>r.some(c=>norm(c).includes("contribuinte")) && r.some(c=>/valor|situacao|parcela|tentativa/.test(norm(c))));
+  // 1º: linha com uma célula que COMEÇA com "Nome do Contribuinte" (evita confundir com o texto longo da 1ª linha)
+  let h=rows.findIndex(r=>r.some(c=>{ const n=norm(c); return n.startsWith("nome do contribuinte")&&n.length<80; }));
+  if(h<0) h=rows.findIndex(r=>r.some(c=>norm(c).includes("contribuinte")) && r.some(c=>/valor|situacao|parcela|tentativa/.test(norm(c))));
   if(h<0) h=rows.findIndex(r=>r.some(c=>/valor atual|valor da parcela|tentativa/.test(norm(c))));
   if(h<0) return {head:[],data:[],headRaw:[]};
   const head=rows[h].map(norm);
@@ -202,10 +204,11 @@ async function carregar0(){
           const cel=(r[i]||"").trim(); if(!cel) return;
           tent++; const d=dataDe(cel);
           if(d) dias[d]=(dias[d]||0)+1; else tentSemData++;
-          // responsável: coluna J (literal) ou a coluna ao lado da TENTATIVA
+          // responsável da tentativa = coluna "RESPONSÁVEL" mais próxima da coluna TENTATIVA (à direita ou à esquerda; empate = direita)
           const qm=v=>{ const t=norm(v); return t.includes("maria clara")?"Maria Clara":(/\bcarla\b/.test(t)?"Carla":null); };
-          const quem=qm(r[9])||qm(r[i+1]); diagCab=head[9]||"";
-          if(!quem){ outros++; const v=((r[9]||"").trim()||"(vazio)").slice(0,30); diagVals[v]=(diagVals[v]||0)+1; }
+          let rc=-1,bd=1e9; head.forEach((x,c)=>{ if(!x.startsWith("responsavel")) return; const dd=Math.abs(c-i)*2-(c>i?1:0); if(dd<bd){bd=dd;rc=c;} });
+          const quem=rc>=0?qm(r[rc]):null; diagCab=rc>=0?head[rc]:"";
+          if(!quem){ outros++; const v=((rc>=0?(r[rc]||"").trim():"")||"(vazio)").slice(0,30); diagVals[v]=(diagVals[v]||0)+1; }
           if(quem){ pess[quem].tot++; if(d) pess[quem].dias[d]=(pess[quem].dias[d]||0)+1; }
         });
       });
