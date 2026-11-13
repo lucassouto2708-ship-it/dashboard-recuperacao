@@ -95,7 +95,7 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
 <script>try{var t=localStorage.getItem("tema");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute"><defs>
+<svg aria-hidden="true" width="0" height="0" style="position:absolute"><defs>
   <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
   <symbol id="i-ref" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
@@ -107,13 +107,13 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
 <header class="top">
   <div class="in">
     <div class="brand">
-      <div class="mark"><svg class="i" style="width:20px;height:20px"><use href="#i-cash"/></svg></div>
+      <div class="mark"><svg aria-hidden="true" class="i" style="width:20px;height:20px"><use href="#i-cash"/></svg></div>
       <div><h1>Painel de Recuperação de Créditos</h1><div class="sub">Acompanhamento de cobrança e parcelamento da Dívida Ativa</div></div>
     </div>
     <div class="tools">
-      <button class="btn sec" id="tema" title="Alternar tema claro/escuro"><svg class="i"><use href="#i-moon"/></svg>Tema</button>
-      <button class="btn sec" id="pdf" title="Gerar relatório em PDF"><svg class="i"><use href="#i-doc"/></svg>Gerar PDF</button>
-      <button class="btn" id="rel"><svg class="i"><use href="#i-ref"/></svg>Atualizar</button>
+      <button class="btn sec" id="tema" title="Alternar tema claro/escuro"><svg aria-hidden="true" class="i"><use href="#i-moon"/></svg>Tema</button>
+      <button class="btn sec" id="pdf" title="Gerar relatório em PDF"><svg aria-hidden="true" class="i"><use href="#i-doc"/></svg>Gerar PDF</button>
+      <button class="btn" id="rel"><svg aria-hidden="true" class="i"><use href="#i-ref"/></svg>Atualizar</button>
     </div>
   </div>
   <div class="bar"><div class="in"><span id="upd">Carregando…</span></div></div>
@@ -121,7 +121,7 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
 
 <main class="wrap">
   <details class="panel" id="conf">
-    <summary><svg class="i"><use href="#i-link"/></svg>Conectar planilha</summary>
+    <summary><svg aria-hidden="true" class="i"><use href="#i-link"/></svg>Conectar planilha</summary>
     <div class="bd">
       <p class="sub" style="margin:0 0 12px">No Google Sheets: <b>Compartilhar → Qualquer pessoa com o link → Leitor</b>. Clique em cada aba, copie o link da barra do navegador e cole abaixo, <b>um link por linha</b> (um por aba).</p>
       <label for="links">Links das abas</label>
@@ -141,13 +141,13 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
 
   <div class="cols">
     <section class="panel">
-      <div class="hd"><h2><svg class="i"><use href="#i-line"/></svg>Tentativas por dia</h2></div>
+      <div class="hd"><h2><svg aria-hidden="true" class="i"><use href="#i-line"/></svg>Tentativas por dia</h2></div>
       <div class="bd"><div class="chart"><canvas id="cTent"></canvas><div class="empty" id="tEmpty"><div><b>Sem tentativas com data</b><br>Preencha a data nas colunas TENTATIVA da planilha para ver a evolução diária.</div></div></div>
         <div class="chips" id="tResp" style="justify-content:center;margin:var(--s3) 0 0"></div></div>
     </section>
     <div>
       <section class="panel">
-        <div class="hd"><h2><svg class="i"><use href="#i-doc"/></svg>Parcelamento: pago x a receber</h2></div>
+        <div class="hd"><h2><svg aria-hidden="true" class="i"><use href="#i-doc"/></svg>Parcelamento: pago x a receber</h2></div>
         <div class="bd">
           <div class="prog"><i id="pBar" style="width:0"></i></div>
           <div class="row"><span>Pago: <b id="pPago">–</b></span><span>A receber: <b id="pAber">–</b></span></div>
@@ -156,15 +156,15 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
         </div>
       </section>
       <section class="panel">
-        <div class="hd"><h2><svg class="i"><use href="#i-cash"/></svg>Situação da carteira</h2></div>
+        <div class="hd"><h2><svg aria-hidden="true" class="i"><use href="#i-cash"/></svg>Situação da carteira</h2></div>
         <div class="bd"><div class="chart" style="height:250px"><canvas id="cRec"></canvas></div></div>
       </section>
     </div>
   </div>
   <section class="panel" id="resultados">
-    <div class="hd"><h2><svg class="i"><use href="#i-doc"/></svg>Resultado dos contatos</h2>
+    <div class="hd"><h2><svg aria-hidden="true" class="i"><use href="#i-doc"/></svg>Resultado dos contatos</h2>
       <div class="tools"><label style="margin:0;font-weight:400;display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="chkFC"> Ocultar "Fazer contato"</label>
-      <button class="btn sec" id="btnXls" title="Baixar Excel com uma aba para cada resultado"><svg class="i"><use href="#i-doc"/></svg>Baixar Excel</button></div></div>
+      <button class="btn sec" id="btnXls" title="Baixar Excel com uma aba para cada resultado"><svg aria-hidden="true" class="i"><use href="#i-doc"/></svg>Baixar Excel</button></div></div>
     <div class="bd">
       <div id="rEmpty" class="sub" style="display:none">Nenhum resultado preenchido na coluna RESULTADO.</div>
       <div id="rWrap"><div class="chart" style="height:240px"><canvas id="cRes"></canvas></div></div>
@@ -172,7 +172,7 @@ td.neg{color:var(--err);font-weight:500}td.mut{color:var(--mut)}
     </div>
   </section>
   <section class="panel" id="fluxo">
-    <div class="hd"><h2><svg class="i"><use href="#i-cash"/></svg>Fluxo de caixa previsto – parcelamentos</h2><span class="sub">Saldo a receber distribuído pelas datas da coluna VENCIMENTOS</span></div>
+    <div class="hd"><h2><svg aria-hidden="true" class="i"><use href="#i-cash"/></svg>Fluxo de caixa previsto – parcelamentos</h2><span class="sub">Saldo a receber distribuído pelas datas da coluna VENCIMENTOS</span></div>
     <div class="bd">
       <div class="fk"><div><span>Total a receber</span><b id="fTotal">–</b></div><div><span>Vencidas (conferir)</span><b id="fVenc" style="color:var(--err)">–</b></div><div><span>Próximos 30 dias</span><b id="fProx">–</b></div><div><span>Após 30 dias</span><b id="fSem">–</b></div></div>
       <div id="fEmpty" class="sub" style="display:none">Nenhuma parcela futura encontrada. Preencha a coluna VENCIMENTOS (ex.: 30/11; 22/12) na aba de parcelamento.</div>
